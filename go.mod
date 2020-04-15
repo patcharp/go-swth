@@ -1,4 +1,4 @@
-module go-swth
+module github.com/patcharp/go-swth
 
 go 1.14
 
