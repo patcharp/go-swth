@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/disintegration/imaging"
-	"go-swth/requests"
+	"github.com/patcharp/go_swth/requests"
 	"image"
 	"net/http"
 )

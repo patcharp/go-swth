@@ -11,7 +11,7 @@ type Redis struct {
 	Client *redis.Client
 }
 
-func NewClient(host string, port string, db int) Redis {
+func New(host string, port string, db int) Redis {
 	return Redis{
 		Client: redis.NewClient(&redis.Options{
 			Addr:     fmt.Sprintf("%s:%s", host, port),

@@ -22,7 +22,7 @@ type Database struct {
 	Job    *scheduler.Job
 }
 
-func NewDatabase(
+func New(
 	host string,
 	port string,
 	username string,
