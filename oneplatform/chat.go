@@ -27,6 +27,19 @@ type ChatFriend struct {
 	Type        string `json:"type"`
 }
 
+type Choice struct {
+	Label string `json:"label"`
+	Type  string `json:"type"`
+	Url   string `json:"url"`
+	Size  string `json:"size"`
+}
+type Elements struct {
+	Image   string   `json:"image"`
+	Title   string   `json:"title"`
+	Detail  string   `json:"detail"`
+	Choices []Choice `json:"choice"`
+}
+
 func NewChatBot(botId string, token string, tokenType string) Chat {
 	return Chat{
 		BotId:       botId,
@@ -83,18 +96,6 @@ func (c *Chat) PushTextMessage(to string, msg string, customNotify *string) erro
 }
 
 func (c *Chat) PushWebView(to string, label string, path string, img string, title string, detail string, customNotify *string) error {
-	type Choice struct {
-		Label string `json:"label"`
-		Type  string `json:"type"`
-		Url   string `json:"url"`
-		Size  string `json:"size"`
-	}
-	type Elements struct {
-		Image   string   `json:"image"`
-		Title   string   `json:"title"`
-		Detail  string   `json:"detail"`
-		Choices []Choice `json:"choice"`
-	}
 	pushMessage := struct {
 		To           string     `json:"to"`
 		BotId        string     `json:"bot_id"`
@@ -116,6 +117,47 @@ func (c *Chat) PushWebView(to string, label string, path string, img string, tit
 						Type:  "webview",
 						Url:   path,
 						Size:  "full",
+					},
+				},
+			},
+		},
+	}
+
+	if customNotify != nil {
+		pushMessage.CustomNotify = *customNotify
+	}
+	body, _ := json.Marshal(&pushMessage)
+	r, err := c.send(http.MethodPost, c.url("/push_message"), body)
+	if err != nil {
+		return err
+	}
+	if r.Code != 200 {
+		return errors.New(fmt.Sprintf("server return error with http code %d : %s", r.Code, string(r.Body)))
+	}
+	return nil
+}
+
+func (c *Chat) PushLink(to string, label string, path string, img string, title string, detail string, customNotify *string) error {
+	pushMessage := struct {
+		To           string     `json:"to"`
+		BotId        string     `json:"bot_id"`
+		Type         string     `json:"type"`
+		CustomNotify string     `json:"custom_notification,omitempty"`
+		Elements     []Elements `json:"elements"`
+	}{
+		To:    to,
+		BotId: c.BotId,
+		Type:  "template",
+		Elements: []Elements{
+			{
+				Image:  img,
+				Title:  title,
+				Detail: detail,
+				Choices: []Choice{
+					{
+						Label: label,
+						Type:  "link",
+						Url:   path,
 					},
 				},
 			},
