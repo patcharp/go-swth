@@ -40,6 +40,13 @@ type Elements struct {
 	Choices []Choice `json:"choice"`
 }
 
+type QuickReply struct {
+	Label   string      `json:"label"`
+	Type    string      `json:"type"`
+	Message string      `json:"message"`
+	Payload interface{} `json:"payload"`
+}
+
 func NewChatBot(botId string, token string, tokenType string) Chat {
 	return Chat{
 		BotId:       botId,
@@ -169,6 +176,29 @@ func (c *Chat) PushLink(to string, label string, path string, img string, title 
 	}
 	body, _ := json.Marshal(&pushMessage)
 	r, err := c.send(http.MethodPost, c.url("/push_message"), body)
+	if err != nil {
+		return err
+	}
+	if r.Code != 200 {
+		return errors.New(fmt.Sprintf("server return error with http code %d : %s", r.Code, string(r.Body)))
+	}
+	return nil
+}
+
+func (c *Chat) PushQuickReply(to string, message string, quickReply []QuickReply) error {
+	pushQuickReply := struct {
+		To         string       `json:"to"`
+		BotId      string       `json:"bot_id"`
+		Message    string       `json:"message"`
+		QuickReply []QuickReply `json:"quick_reply"`
+	}{
+		To:         to,
+		BotId:      c.BotId,
+		Message:    message,
+		QuickReply: quickReply,
+	}
+	body, _ := json.Marshal(&pushQuickReply)
+	r, err := c.send(http.MethodPost, c.url("/push_quickreply"), body)
 	if err != nil {
 		return err
 	}
