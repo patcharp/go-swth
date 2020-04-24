@@ -20,55 +20,55 @@ const (
 	NameSpace   = "echo"
 )
 
-type Config struct {
+type EchoServer struct {
 	host string
 	port string
 	prod bool
 	e    *echo.Echo
 }
 
-func New(host string, port string, prod bool) Config {
-	cfg := Config{
+func NewEchoServer(host string, port string, prod bool) EchoServer {
+	s := EchoServer{
 		host: host,
 		port: port,
 		prod: prod,
 		e:    echo.New(),
 	}
-	cfg.e.Use(middleware.Recover())
-	cfg.e.Use(middleware.RemoveTrailingSlash())
+	s.e.Use(middleware.Recover())
+	s.e.Use(middleware.RemoveTrailingSlash())
 	// Cr. https://echo.labstack.com/middleware/request-id
-	cfg.e.Use(middleware.RequestID())
+	s.e.Use(middleware.RequestID())
 	// Cr. https://echo.labstack.com/middleware/secure
-	cfg.e.Use(middleware.Secure())
-	cfg.e.HTTPErrorHandler = cfg.serverErrorHandler
-	listenAddr := fmt.Sprintf("%s:%s", cfg.host, cfg.port)
-	cfg.e.Server = &http.Server{
+	s.e.Use(middleware.Secure())
+	s.e.HTTPErrorHandler = s.serverErrorHandler
+	listenAddr := fmt.Sprintf("%s:%s", s.host, s.port)
+	s.e.Server = &http.Server{
 		Addr:    listenAddr,
-		Handler: cfg.e,
+		Handler: s.e,
 	}
-	if !cfg.prod {
-		cfg.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+	if !s.prod {
+		s.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 			AllowOrigins: []string{"*"},
 			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		}))
-		cfg.e.Use(cfg.logger())
+		s.e.Use(s.logger())
 	}
-	return cfg
+	return s
 }
 
-func (cfg *Config) Ctx() *echo.Echo {
-	return cfg.e
+func (s *EchoServer) Ctx() *echo.Echo {
+	return s.e
 }
 
-func (cfg *Config) Run() error {
-	if err := gracehttp.Serve(cfg.e.Server); err != nil {
+func (s *EchoServer) Run() error {
+	if err := gracehttp.Serve(s.e.Server); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (cfg *Config) EnableMetrics(metricsPath string, nameSpace string) error {
-	cfg.e.Use(echoprometheus.MetricsMiddlewareWithConfig(echoprometheus.Config{
+func (s *EchoServer) EnableMetrics(metricsPath string, nameSpace string) error {
+	s.e.Use(echoprometheus.MetricsMiddlewareWithConfig(echoprometheus.Config{
 		Namespace: nameSpace,
 		Buckets: []float64{
 			0.0005, // 0.5ms
@@ -84,11 +84,11 @@ func (cfg *Config) EnableMetrics(metricsPath string, nameSpace string) error {
 			10,     // 10s
 		},
 	}))
-	cfg.e.GET(metricsPath, echo.WrapHandler(promhttp.Handler()))
+	s.e.GET(metricsPath, echo.WrapHandler(promhttp.Handler()))
 	return nil
 }
 
-func (cfg *Config) serverErrorHandler(err error, c echo.Context) {
+func (s *EchoServer) serverErrorHandler(err error, c echo.Context) {
 	var (
 		code = http.StatusInternalServerError
 		msg  interface{}
@@ -99,7 +99,7 @@ func (cfg *Config) serverErrorHandler(err error, c echo.Context) {
 		if he.Internal != nil {
 			err = fmt.Errorf("%v, %v", err, he.Internal)
 		}
-	} else if cfg.e.Debug {
+	} else if s.e.Debug {
 		msg = err.Error()
 	} else {
 		msg = http.StatusText(code)
@@ -114,12 +114,12 @@ func (cfg *Config) serverErrorHandler(err error, c echo.Context) {
 			err = c.JSON(code, msg)
 		}
 		if err != nil {
-			cfg.e.Logger.Error(err)
+			s.e.Logger.Error(err)
 		}
 	}
 }
 
-func (cfg *Config) logger() echo.MiddlewareFunc {
+func (s *EchoServer) logger() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			req := c.Request()
@@ -157,7 +157,7 @@ func (cfg *Config) logger() echo.MiddlewareFunc {
 	}
 }
 
-func (cfg *Config) SkipperExceptPath(c echo.Context, path map[string]string) bool {
+func (s *EchoServer) SkipperExceptPath(c echo.Context, path map[string]string) bool {
 	if method, ok := path[c.Path()]; ok && method == c.Request().Method {
 		return true
 	}

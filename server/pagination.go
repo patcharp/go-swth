@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/labstack/echo/v4"
 	"strconv"
 )
@@ -16,10 +17,22 @@ type Pagination struct {
 	Size uint
 }
 
-func GetPagination(c echo.Context) Pagination {
-	var p Pagination
-	p.Page = uint(atoi(c.QueryParam("page"), DefaultQueryPage))
-	p.Size = uint(atoi(c.QueryParam("size"), DefaultQuerySize))
+func GetEchoPagination(c echo.Context) Pagination {
+	p := Pagination{
+		Page: uint(atoi(c.QueryParam("page"), DefaultQueryPage)),
+		Size: uint(atoi(c.QueryParam("size"), DefaultQuerySize)),
+	}
+	if p.Size > MaxQuerySize {
+		p.Size = MaxQuerySize
+	}
+	return p
+}
+
+func GetGinPagination(c gin.Context) Pagination {
+	p := Pagination{
+		Page: uint(atoi(c.Query("page"), DefaultQueryPage)),
+		Size: uint(atoi(c.Query("size"), DefaultQuerySize)),
+	}
 	if p.Size > MaxQuerySize {
 		p.Size = MaxQuerySize
 	}
